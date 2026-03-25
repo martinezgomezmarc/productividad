@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Planificador de Productividad - Febrero 2026</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&display=swap');
+        body { font-family: 'Inter', sans-serif; }
+        .chart-container { position: relative; height: 320px; width: 100%; }
+        .tab-active { border-bottom: 3px solid #3b82f6; color: #1e40af; font-weight: 700; }
+    </style>
+</head>
+<body class="bg-slate-50 min-h-screen p-4 md:p-8">
+
+    <div class="max-w-6xl mx-auto">
+        <!-- Header -->
+        <header class="mb-8 bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+            <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
+                <div>
+                    <h1 class="text-2xl font-bold text-slate-800 mb-1">Análisis de Productividad Multinivel</h1>
+                    <p class="text-slate-500 text-sm">Febrero 2026 · Gestión de Productividad de Columnas por Tiempo y Volumen.</p>
+                </div>
+                <div class="mt-4 md:mt-0 flex gap-3">
+                    <div class="bg-emerald-50 border border-emerald-100 p-3 rounded-xl text-center min-w-[120px]">
+                        <span class="block text-emerald-600 font-bold uppercase text-[10px] tracking-wider mb-1">Columnas Totales</span>
+                        <span id="totalMonthlyOrders" class="text-emerald-900 font-bold text-xl tracking-tight">0</span>
+                    </div>
+                    <div class="bg-blue-50 border border-blue-100 p-3 rounded-xl text-center min-w-[120px]">
+                        <span class="block text-blue-600 font-bold uppercase text-[10px] tracking-wider mb-1">Media Col/Día</span>
+                        <span id="avgOrders" class="text-blue-900 font-bold text-xl tracking-tight">0.0</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tabs Navigation -->
+            <div class="flex border-b border-slate-200 mb-6 overflow-x-auto whitespace-nowrap">
+                <button onclick="changeTab('avail')" id="tab-avail" class="px-6 py-3 text-sm font-medium transition-all text-slate-500 hover:text-slate-700">Tiempos Disponibles</button>
+                <button onclick="changeTab('time')" id="tab-time" class="px-6 py-3 text-sm font-medium transition-all tab-active">Productividad Tiempo</button>
+                <button onclick="changeTab('volume')" id="tab-volume" class="px-6 py-3 text-sm font-medium text-slate-500 hover:text-slate-700 transition-all">Productividad Volumen</button>
+                <button onclick="changeTab('final')" id="tab-final" class="px-6 py-3 text-sm font-medium text-slate-500 hover:text-slate-700 transition-all">Productividad Final</button>
+            </div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-12 gap-8 items-end">
+                <div class="md:col-span-4">
+                    <label for="timePerOrder" class="block text-sm font-semibold text-slate-700 mb-2">
+                        Tiempo por columna (minutos)
+                    </label>
+                    <input 
+                        type="number" 
+                        id="timePerOrder" 
+                        value="15" 
+                        min="1" 
+                        step="1"
+                        class="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-all font-bold text-lg text-blue-600"
+                        oninput="updateUI()"
+                    >
+                </div>
+                <div class="md:col-span-8 bg-slate-50 p-4 rounded-xl border border-slate-200">
+                    <div class="flex items-center gap-4 text-xs font-bold text-slate-500 uppercase mb-2">
+                        <span id="legend-label">Referencia de Escala</span>
+                    </div>
+                    <div class="flex h-3 w-full rounded-full overflow-hidden border border-white">
+                        <div class="flex-1 bg-emerald-50"></div>
+                        <div class="flex-1 bg-emerald-100"></div>
+                        <div class="flex-1 bg-emerald-200"></div>
+                        <div class="flex-1 bg-emerald-300"></div>
+                        <div class="flex-1 bg-emerald-400"></div>
+                        <div class="flex-1 bg-emerald-500"></div>
+                        <div class="flex-1 bg-emerald-600"></div>
+                    </div>
+                    <div class="flex justify-between text-[10px] text-slate-400 mt-1 font-medium italic">
+                        <span id="legend-min">Mínimo</span>
+                        <span id="legend-max">Máximo</span>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <!-- Calendar Section -->
+            <div class="lg:col-span-2">
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 h-full">
+                    <h2 id="calendar-title" class="text-lg font-bold text-slate-800 mb-6 flex items-center gap-2">
+                        <!-- Icon and text updated via JS -->
+                    </h2>
+                    <div class="grid grid-cols-7 gap-2 mb-2">
+                        <div class="text-center text-[10px] font-black text-slate-400 uppercase">Lun</div>
+                        <div class="text-center text-[10px] font-black text-slate-400 uppercase">Mar</div>
+                        <div class="text-center text-[10px] font-black text-slate-400 uppercase">Mié</div>
+                        <div class="text-center text-[10px] font-black text-slate-400 uppercase">Jue</div>
+                        <div class="text-center text-[10px] font-black text-slate-400 uppercase">Vie</div>
+                        <div class="text-center text-[10px] font-black text-rose-400 uppercase">Sáb</div>
+                        <div class="text-center text-[10px] font-black text-rose-400 uppercase">Dom</div>
+                    </div>
+                    <div id="calendar-body" class="grid grid-cols-7 gap-2">
+                        <!-- Injected Days -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Chart Section -->
+            <div class="lg:col-span-1">
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 h-full flex flex-col">
+                    <h2 id="chart-title" class="text-lg font-bold text-slate-800 mb-6 text-center">Gráfico</h2>
+                    <div class="chart-container flex-grow">
+                        <canvas id="productivityChart"></canvas>
+                    </div>
+                    <div class="mt-8 space-y-4">
+                        <div id="status-card" class="p-4 rounded-xl border transition-colors duration-300">
+                            <!-- Updated via JS -->
+                        </div>
+                        <div id="final-legend" class="hidden p-4 rounded-xl border border-slate-100 bg-slate-50 space-y-2">
+                            <h4 class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 text-center">Leyenda de Limitadores</h4>
+                            <div class="flex items-center gap-2">
+                                <div class="px-2 py-0.5 rounded text-[8px] font-bold bg-blue-100 text-blue-700 flex items-center gap-1">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                                    TIEMPO
+                                </div>
+                                <span class="text-[10px] text-slate-500 italic">Límite por disponibilidad horaria.</span>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <div class="px-2 py-0.5 rounded text-[8px] font-bold bg-rose-100 text-rose-700 flex items-center gap-1">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg>
+                                    VOLUMEN
+                                </div>
+                                <span class="text-[10px] text-slate-500 italic">Límite por factor volumétrico.</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const totalDays = 28;
+        const startDayIndex = 6; // 1 de feb 2026 es Domingo
+        let myChart;
+        let currentTab = 'time';
+
+        // Iconos SVG
+        const iconClock = `<svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="inline"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>`;
+        const iconBox = `<svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="inline"><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg>`;
+
+        // Datos base (Estructura de Febrero 2026)
+        const dailyData = Array.from({ length: totalDays }, (_, i) => {
+            const day = i + 1;
+            const dateObj = new Date(2026, 1, day);
+            const dayOfWeek = dateObj.getDay(); 
+
+            let availableMinutes = 0;
+            switch(dayOfWeek) {
+                case 1: availableMinutes = 390; break; // Lun: 6.5h
+                case 2: case 3: availableMinutes = 360; break; // Mar/Mie: 6h
+                case 4: case 5: availableMinutes = 390; break; // Jue/Vie: 6.5h
+                case 6: availableMinutes = 420; break; // Sab: 7h
+                case 0: availableMinutes = 0; break;   // Dom: 0h
+            }
+
+            let week;
+            if (day === 1) week = 1;
+            else if (day <= 8) week = 2;
+            else if (day <= 15) week = 3;
+            else if (day <= 22) week = 4;
+            else week = 5;
+
+            const volumeFactor = (week === 3 || week === 4) ? 1.20 : 1.25;
+
+            return {
+                day, week, dayOfWeek, availableMinutes, volumeFactor
+            };
+        });
+
+        function changeTab(tab) {
+            currentTab = tab;
+            ['avail', 'time', 'volume', 'final'].forEach(t => {
+                const el = document.getElementById(`tab-${t}`);
+                if (t === tab) {
+                    el.classList.add('tab-active');
+                    el.classList.remove('text-slate-500');
+                } else {
+                    el.classList.remove('tab-active');
+                    el.classList.add('text-slate-500');
+                }
+            });
+            updateUI();
+        }
+
+        function getColorScale(value, min, max) {
+            if (value === 0) return '#f8fafc'; 
+            if (min === max) return '#d1fae5';
+            const ratio = (value - min) / (max - min);
+            if (ratio < 0.15) return '#ecfdf5';
+            if (ratio < 0.3)  return '#d1fae5';
+            if (ratio < 0.45) return '#a7f3d0';
+            if (ratio < 0.6)  return '#6ee7b7';
+            if (ratio < 0.75) return '#34d399';
+            if (ratio < 0.9)  return '#10b981';
+            return '#059669';
+        }
+
+        function updateUI() {
+            const timePerOrder = parseFloat(document.getElementById('timePerOrder').value) || 1;
+            const container = document.getElementById('calendar-body');
+            container.innerHTML = '';
+
+            const dataToDisplay = dailyData.map(d => {
+                const timeCap = Math.floor(d.availableMinutes / timePerOrder);
+                const volumeCap = d.availableMinutes > 0 ? Math.floor(14 * d.volumeFactor) : 0;
+                const finalCap = Math.min(timeCap, volumeCap);
+                
+                let value, subtext, label = "Col. Max", limitingFactor = null;
+                
+                if (currentTab === 'avail') {
+                    value = d.availableMinutes / 60;
+                    subtext = d.availableMinutes > 0 ? d.availableMinutes + ' min' : 'Cerrado';
+                    label = "Horas";
+                } else if (currentTab === 'time') {
+                    value = timeCap;
+                    subtext = d.availableMinutes > 0 ? (d.availableMinutes / 60).toFixed(1) + 'h' : 'Cerrado';
+                } else if (currentTab === 'volume') {
+                    value = volumeCap;
+                    subtext = d.availableMinutes > 0 ? 'F:' + d.volumeFactor.toFixed(2) : '-';
+                } else {
+                    value = finalCap;
+                    if (d.availableMinutes > 0) {
+                        limitingFactor = timeCap <= volumeCap ? 'time' : 'volume';
+                    }
+                }
+
+                return { day: d.day, value, subtext, label, limitingFactor, available: d.availableMinutes > 0 };
+            });
+
+            const activeValues = dataToDisplay.filter(d => d.available).map(d => d.value);
+            const minV = activeValues.length ? Math.min(...activeValues) : 0;
+            const maxV = activeValues.length ? Math.max(...activeValues) : 0;
+            let totalV = 0;
+
+            const calTitle = document.getElementById('calendar-title');
+            const chartTitle = document.getElementById('chart-title');
+            const statusCard = document.getElementById('status-card');
+            const finalLegend = document.getElementById('final-legend');
+            
+            finalLegend.classList.toggle('hidden', currentTab !== 'final');
+
+            if (currentTab === 'avail') {
+                calTitle.innerHTML = '📅 Tiempos Disponibles';
+                chartTitle.innerHTML = 'Gráfico de Horas';
+                statusCard.className = 'p-4 rounded-xl border border-slate-200 bg-slate-50';
+                statusCard.innerHTML = `<h4 class="text-sm font-bold text-slate-800 mb-1 leading-none text-center">Horario Base</h4><p class="text-[11px] text-slate-500 mt-2 italic font-medium text-center">Configuración horaria sin parámetros de productividad.</p>`;
+            } else if (currentTab === 'time') {
+                calTitle.innerHTML = '🕒 Productividad por Tiempo';
+                chartTitle.innerHTML = 'Gráfico de Columnas';
+                statusCard.className = 'p-4 rounded-xl border border-blue-100 bg-blue-50';
+                statusCard.innerHTML = `<h4 class="text-sm font-bold text-blue-800 mb-1 leading-none text-center">Horario Programado</h4><p class="text-[11px] text-blue-600 mt-2 italic font-medium text-center">Análisis de rendimiento basado en disponibilidad horaria.</p>`;
+            } else if (currentTab === 'volume') {
+                calTitle.innerHTML = '📦 Productividad por Volumen';
+                chartTitle.innerHTML = 'Gráfico de Columnas';
+                statusCard.className = 'p-4 rounded-xl border border-orange-100 bg-orange-50';
+                statusCard.innerHTML = `<h4 class="text-sm font-bold text-orange-800 mb-1 leading-none text-center">Factor Semanal</h4><p class="text-[11px] text-orange-600 mt-2 italic font-medium text-center">Basado en el espacio físico del vehículo.</p>`;
+            } else {
+                calTitle.innerHTML = '🎯 Productividad Final';
+                chartTitle.innerHTML = 'Gráfico de Columnas';
+                statusCard.className = 'p-4 rounded-xl border border-emerald-100 bg-emerald-50';
+                statusCard.innerHTML = `<h4 class="text-sm font-bold text-emerald-800 mb-1 leading-none text-center text-center">Límite Operativo</h4><p class="text-[11px] text-emerald-600 mt-2 italic font-medium text-center text-center">Impacto de tiempo vs espacio físico.</p>`;
+            }
+
+            for (let i = 0; i < startDayIndex; i++) {
+                const empty = document.createElement('div');
+                empty.className = "h-20 rounded-lg bg-slate-100/50 border border-dashed border-slate-200";
+                container.appendChild(empty);
+            }
+
+            dataToDisplay.forEach((d) => {
+                totalV += d.value;
+                const bgColor = d.available ? getColorScale(d.value, minV, maxV) : '#f1f5f9';
+                const isDark = d.available && (d.value - minV) / (maxV - minV + 0.1) > 0.6;
+
+                const dayCard = document.createElement('div');
+                dayCard.style.backgroundColor = bgColor;
+                dayCard.className = `relative h-20 p-2 rounded-lg border border-slate-100 shadow-sm transition-all duration-300 flex flex-col justify-between ${d.available ? 'hover:scale-[1.03] cursor-default' : 'opacity-60'} overflow-hidden`;
+
+                let indicatorHtml = '';
+                if (currentTab === 'final' && d.limitingFactor) {
+                    const isTime = d.limitingFactor === 'time';
+                    const colorClasses = isTime ? 'bg-blue-100 text-blue-700' : 'bg-rose-100 text-rose-700';
+                    const icon = isTime ? iconClock : iconBox;
+                    indicatorHtml = `<div class="px-1 py-0.5 rounded shadow-sm text-[7px] font-black uppercase flex items-center gap-1 ${colorClasses}">${icon} ${isTime ? 'TIEMPO' : 'VOL'}</div>`;
+                } else if (d.subtext) {
+                    indicatorHtml = `<span class="text-[8px] font-bold ${isDark ? 'text-white/60' : 'text-slate-400'} italic uppercase tracking-tighter">${d.subtext}</span>`;
+                }
+
+                dayCard.innerHTML = `
+                    <div class="flex justify-between items-start">
+                        <span class="text-[10px] font-black ${isDark ? 'text-white/80' : 'text-slate-400'}">${d.day}</span>
+                        ${indicatorHtml}
+                    </div>
+                    <div class="text-center">
+                        <div class="text-xl font-black ${isDark ? 'text-white' : 'text-slate-800'} leading-none tracking-tighter">
+                            ${currentTab === 'avail' ? d.value.toFixed(1) : (d.value || (d.available ? 0 : ''))}
+                        </div>
+                        <div class="text-[7px] font-bold uppercase tracking-tighter ${isDark ? 'text-white/80' : 'text-slate-500'}">
+                            ${d.available ? d.label : ''}
+                        </div>
+                    </div>
+                `;
+                container.appendChild(dayCard);
+            });
+
+            // Resumen de cabecera
+            if (currentTab === 'avail') {
+                document.getElementById('totalMonthlyOrders').innerText = (totalV).toFixed(1) + 'h';
+                document.getElementById('avgOrders').innerText = (totalV / 24).toFixed(1) + 'h';
+            } else {
+                const finalSum = dailyData.reduce((acc, d) => {
+                    const t = Math.floor(d.availableMinutes / timePerOrder);
+                    const v = d.availableMinutes > 0 ? Math.floor(14 * d.volumeFactor) : 0;
+                    return acc + Math.min(t, v);
+                }, 0);
+                document.getElementById('totalMonthlyOrders').innerText = finalSum.toLocaleString();
+                document.getElementById('avgOrders').innerText = (finalSum / 24).toFixed(1);
+            }
+
+            updateChart(dataToDisplay.map(d => d.value));
+        }
+
+        function updateChart(data) {
+            const labels = dailyData.map(d => d.day);
+            const colorMap = { 'avail': '#64748b', 'time': '#3b82f6', 'volume': '#f97316', 'final': '#10b981' };
+            
+            if (myChart) {
+                myChart.data.datasets[0].data = data;
+                myChart.data.datasets[0].backgroundColor = colorMap[currentTab];
+                myChart.data.datasets[0].label = currentTab === 'avail' ? 'Horas' : 'Columnas';
+                myChart.update();
+            } else {
+                const ctx = document.getElementById('productivityChart').getContext('2d');
+                myChart = new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            label: 'Datos',
+                            data: data,
+                            backgroundColor: colorMap[currentTab],
+                            borderRadius: 4,
+                            barPercentage: 0.6
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: { 
+                            legend: { display: false },
+                            tooltip: {
+                                callbacks: {
+                                    afterLabel: function(context) {
+                                        const dayIdx = context.dataIndex;
+                                        const dayNames = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
+                                        return `Día: ${dayNames[dailyData[dayIdx].dayOfWeek]}`;
+                                    }
+                                }
+                            }
+                        },
+                        scales: {
+                            y: { beginAtZero: true, grid: { color: '#f1f5f9' }, ticks: { font: { size: 10 } } },
+                            x: { grid: { display: false }, ticks: { font: { size: 9 } } }
+                        }
+                    }
+                });
+            }
+        }
+
+        window.onload = function() {
+            updateUI();
+        };
+    </script>
+</body>
+</html>
